@@ -1,0 +1,25 @@
+# Secrets — the middlebox .env carries NATS credentials, never commit it
+.env
+
+# Runtime output
+mitigation_results.json
+*.pcap
+*.log
+
+# Build artefacts / binaries
+*.o
+*.so
+*.dll
+*.dylib
+*.exe
+
+# Editor / OS noise
+.vscode/
+.idea/
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.venv/

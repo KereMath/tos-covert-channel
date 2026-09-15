@@ -1,0 +1,25 @@
+# Additions made to the upstream cengwins/middlebox docker-compose.yml.
+# The rest of that file (nats, mitm, sec, insec, go-processor, python-processor,
+# prometheus, grafana) is upstream's and is not reproduced here.
+#
+# Paste this service alongside the upstream ones to run Phase 1.
+
+  random-delay-processor:
+    build: ./dockers/random-delay-processor
+    init: true
+    container_name: random-delay-processor
+    networks:
+      intnet: {}
+    command: ["python", "/code/random-delay-processor/processor.py"]
+    volumes:
+      - ./config:/config
+      - ./code/random-delay-processor:/code/random-delay-processor
+    environment:
+      - SECURE_NET=${SECURE_NET}
+      - SECURENET_GATEWAY=${SECURENET_GATEWAY}
+      - INSECURE_NET=${INSECURE_NET}
+      - INSECURENET_GATEWAY=${INSECURENET_GATEWAY}
+      - SECURENET_HOST_IP=${SECURENET_HOST_IP}
+      - INSECURENET_HOST_IP=${INSECURENET_HOST_IP}
+      - NATS_SURVEYOR_SERVERS=${NATS_SURVEYOR_SERVERS}
+      - DELAY_VALUE=500
