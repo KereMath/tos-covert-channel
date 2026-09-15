@@ -8,7 +8,7 @@ import math
 from scapy.all import IP, UDP, Raw, send
 
 parser = argparse.ArgumentParser(description='TOS Covert Channel Sender with Header')
-parser.add_argument('--message', type=str, default='CENG435 TOS COVERT CHANNEL',
+parser.add_argument('--message', type=str, default='TOS COVERT CHANNEL',
                     help='Gizli olarak iletilecek mesaj')
 parser.add_argument('--tos-mapping-bits', type=int, default=3, 
                     help='TOS alanında kullanılacak bit sayısı (1-8)')
