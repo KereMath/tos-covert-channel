@@ -10,9 +10,10 @@ mitigator — plus the measurements taken from each.
 > environment. The testbed — the `sec` / `insec` / `mitm` container topology, the
 > NATS message bus that hands packets to a processor, the MITM switch, and the
 > Prometheus/Grafana plumbing — **is theirs, not mine.** This repository contains
-> only the files I wrote, which plug into that environment. Nothing here runs
-> standalone; see [Running](#running) for how to graft it onto a checkout of
-> theirs. Upstream is GPL-3.0 and so is this.
+> only the files I wrote, which plug into that environment. The sender and the
+> receiver do run on their own over loopback; the detector and the mitigator need
+> that testbed, because they read packets off its NATS bus. See
+> [Running](#running) for both paths. Upstream is GPL-3.0 and so is this.
 
 ## What it is
 
@@ -132,6 +133,61 @@ is scrubbed. Overt traffic was forwarded intact throughout.
 
 ## Running
 
+There are two ways in. **Standalone** needs nothing but Python and a minute, and
+exercises the covert channel end to end. **Full testbed** brings up the upstream
+middlebox and is the only way to run the detector and the mitigator, since both
+of them read packets off the NATS bus rather than off a wire.
+
+### Standalone — sender and receiver only
+
+Both sides run on one Linux host and talk over the loopback interface. Scapy
+builds raw packets and sniffs the wire, so both need root.
+
+```bash
+pip install scapy
+```
+
+Terminal 1 — receiver, sniffing loopback:
+
+```bash
+sudo python3 code/insec/tos_covert_receiver.py --iface lo --tos-mapping-bits 3
+```
+
+Terminal 2 — sender, aimed at localhost:
+
+```bash
+sudo python3 code/sec/tos_covert_sender.py --target-ip 127.0.0.1 --tos-mapping-bits 3 --message "HELLO"
+```
+
+The receiver walks its state machine as the packets land, then prints the
+decoded string and the capacity it measured:
+
+```
+START sinyali alındı. HEADER durumuna geçiliyor.
+Header alındı. 14 payload sembolü bekleniyor.
+
+Alınan ve çözümlenen mesaj:
+HELLO
+Mesaj süresi: … saniye, Kapasite: … bit/s
+```
+
+Fourteen is not arbitrary: `HELLO` is 5×8 = 40 bits, padded to 42 so it divides
+by the 3-bit symbol width, giving 14 symbols. Change `--tos-mapping-bits` and
+that number moves with it. The receiver keeps listening afterwards and exits on
+its own after `--timeout` seconds (180 by default), printing a mean and 95 %
+confidence interval over every message it decoded.
+
+If the receiver never prints anything, it is usually Scapy rather than the
+channel: on some versions the default layer-3 socket will not put packets onto
+`lo`. Add one line under the Scapy import in `code/sec/tos_covert_sender.py` and
+try again:
+
+```python
+conf.L3socket = L3RawSocket
+```
+
+### Full testbed — detector and mitigator
+
 You need a working checkout of the upstream environment first:
 
 ```bash
@@ -164,6 +220,8 @@ docker exec -it python-processor python /code/python-processor/simple_detector.p
 docker exec -it sec python3 /code/sec/tos_covert_sender.py \
     --message "HELLO" --tos-mapping-bits 3 --interval 0.1
 ```
+
+### Reproducing the delay plots
 
 To reproduce the delay plots, run the ping campaign against each `DELAY_VALUE`,
 save the output as `<λ>.txt`, and from `analysis/`:
